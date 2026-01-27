@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voices of Pompeii - Concept Prototype</title>
+    
+    <!-- Leaflet CSS for mapping -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Bootstrap 5 for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --pompeii-red: #c1443c;
+            --pompeii-ochre: #d4a76a;
+            --pompeii-sand: #e7d9c5;
+            --pompeii-stone: #8a7f70;
+            --pompeii-dark: #3a3329;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #f8f5f0;
+            color: var(--pompeii-dark);
+            line-height: 1.6;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--pompeii-red) !important;
+            font-size: 1.8rem;
+        }
+        
+        .hero-section {
+            background: linear-gradient(rgba(58, 51, 41, 0.85), rgba(58, 51, 41, 0.9)), 
+                        url('https://images.unsplash.com/photo-1604586376807-f73185cfc5c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 5rem 0;
+            border-bottom: 5px solid var(--pompeii-ochre);
+        }
+        
+        .map-container {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border: 1px solid var(--pompeii-sand);
+            height: 500px;
+        }
+        
+        #pompeii-map {
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .story-modal {
+            border-left: 5px solid var(--pompeii-red);
+            background-color: white;
+        }
+        
+        .graffiti-text {
+            font-family: 'Courier New', monospace;
+            background-color: var(--pompeii-sand);
+            padding: 1rem;
+            border-radius: 5px;
+            border-left: 4px solid var(--pompeii-stone);
+        }
+        
+        .section-title {
+            color: var(--pompeii-red);
+            border-bottom: 2px solid var(--pompeii-ochre);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background-color: var(--pompeii-red);
+        }
+        
+        .feature-card {
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            height: 100%;
+            background-color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-card .card-body {
+            padding: 1.5rem;
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--pompeii-red);
+            margin-bottom: 1rem;
+        }
+        
+        .btn-pompeii {
+            background-color: var(--pompeii-red);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-pompeii:hover {
+            background-color: #a53831;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(193, 68, 60, 0.3);
+        }
+        
+        .audio-player {
+            background-color: var(--pompeii-sand);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .professional-form {
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+        
+        .personal-note {
+            background-color: #f8f5f0;
+            border-left: 4px solid var(--pompeii-ochre);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        footer {
+            background-color: var(--pompeii-dark);
+            color: var(--pompeii-sand);
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        .form-control:focus {
+            border-color: var(--pompeii-ochre);
+            box-shadow: 0 0 0 0.25rem rgba(212, 167, 106, 0.25);
+        }
+        
+        .location-marker {
+            background-color: var(--pompeii-red);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            box-shadow: 0 0 0 3px rgba(193, 68, 60, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .location-marker:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 5px rgba(193, 68, 60, 0.4);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(193, 68, 60, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(193, 68, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(193, 68, 60, 0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 3rem 0;
+            }
+            
+            .map-container {
+                height: 400px;
+            }
+            
+            .display-4 {
+                font-size: 2.2rem;
+            }
+            
+            .professional-form {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-volume-up me-2"></i>Voices of Pompeii
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#concept">The Concept</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#demo">Interactive Demo</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contact">Share Feedback</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 fw-bold mb-4">Voices of Pompeii:<br><span class="text-warning">A Digital Experience Concept</span></h1>
+                    <p class="lead mb-4">A product concept exploring how location-aware storytelling can connect modern visitors with the intimate, human stories of Pompeii's graffiti. This interactive prototype visualizes a potential user journey for education and engagement.</p>
+                    <a href="#concept" class="btn btn-pompeii btn-lg me-3">Explore the Concept</a>
+                    <a href="#contact" class="btn btn-outline-light btn-lg">Share Feedback</a>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="p-4 rounded" style="background-color: rgba(255,255,255,0.1); backdrop-filter: blur(10px);">
+                        <i class="fas fa-quote-left fa-2x text-warning mb-3"></i>
+						<p class="fs-5 fst-italic text-white">"Admiror, O paries, te non cecidisse, qui tot scriptorium taedia sustineas."</p>
+                        <p class="fs-5 fst-italic text-white">"I wonder, O wall, that you have not yet collapsed, you who bear the weight of so many writers."</p>
+						<p class="text-warning mt-2">— Graffiti from a Pompeian wall</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Personal Note -->
+    <section class="py-4" style="background-color: #f8f5f0;">
+        <div class="container">
+            <div class="personal-note">
+                <div class="row align-items-center">
+                    <div class="col-md-1 text-center">
+                        <i class="fas fa-heart text-danger fa-2x"></i>
+                    </div>
+                    <div class="col-md-11">
+                        <p class="fst-italic mb-0">"As a product person fascinated by Roman daily life and religion—from graffiti to lararium—I built this to visualize how technology might serve deeper public understanding, not commerce. This prototype represents a vision for making intimate history accessible."</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Concept -->
+    <section id="concept" class="py-5">
+        <div class="container">
+            <h2 class="section-title">The Concept: Voices of Pompeii</h2>
+            <p class="lead text-center mb-5">A concept prototype exploring how digital curation could make the personal voices in Pompeii's graffiti accessible. This focuses on the user experience of discovering social history in situ.</p>
+            
+            <div class="row g-4 mb-5">
+                <div class="col-md-3">
+                    <div class="feature-card">
+                        <div class="card-body text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <h5 class="card-title">Personal Voices</h5>
+                            <p class="card-text">Centers on ordinary Pompeiians—their loves, jokes, and daily concerns—through authentic graffiti, creating human connection rather than presenting architectural facts.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="feature-card">
+                        <div class="card-body text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-map-marked-alt"></i>
+                            </div>
+                            <h5 class="card-title">Location-Aware</h5>
+                            <p class="card-text">Stories trigger based on visitor location, connecting narrative to physical place. Enhances on-site flow and creates serendipitous discovery.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="feature-card">
+                        <div class="card-body text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
+                            <h5 class="card-title">Thematic Layers</h5>
+                            <p class="card-text">Offers curated thematic paths (Love & Romance, Politics & Satire, Commerce) allowing for repeat visits and targeted educational experiences.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="feature-card">
+                        <div class="card-body text-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-bullseye"></i>
+                            </div>
+                            <h5 class="card-title">Aligned with Institutional Goals</h5>
+                            <p class="card-text">Designed as a potential tool for the Park's educational mission, focusing on visitor learning and preservation of intangible heritage.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Demo -->
+    <section id="demo" class="py-5 bg-light">
+        <div class="container">
+            <h2 class="section-title">Interactive Concept Demo</h2>
+            <p class="lead text-center mb-4">Click on the markers to experience how visitors might encounter graffiti stories at specific locations in Pompeii.</p>
+            
+            <div class="map-container mb-5">
+                <div id="pompeii-map"></div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-10 mx-auto">
+                    <div id="story-details" class="story-modal p-4 shadow rounded mb-4" style="display: none;">
+                        <button id="close-story" class="btn btn-sm btn-outline-secondary float-end mb-2">Close</button>
+                        <h3 id="story-title" class="mb-3"></h3>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h5>Original Graffiti (Latin)</h5>
+                                <div id="story-latin" class="graffiti-text mb-3"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Translation & Context</h5>
+                                <div id="story-translation" class="graffiti-text mb-3"></div>
+                            </div>
+                        </div>
+                        <div id="story-content" class="mb-3"></div>
+                        
+                        <!-- Audio Player -->
+                        <div class="audio-player">
+                            <p class="fw-bold mb-2"><i class="fas fa-headphones me-2"></i>Sample Audio Narrative</p>
+                            <audio id="story-audio" controls style="width: 100%;">
+                                Your browser does not support the audio element.
+                            </audio>
+                            <p class="text-muted mt-2 small"><i class="fas fa-info-circle me-1"></i>This sample represents how professional narration, ambient sounds, and multilingual support could enhance the experience in a full implementation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-heart text-danger me-2"></i>Love & Romance</h5>
+                            <p class="graffiti-text fst-italic mb-3">"Victoria, may you sleep well and may you desire me."</p>
+                            <p class="card-text">Found in a tavern, this heartfelt message shows public declarations of affection aren't modern. It offers a direct emotional connection to the past.</p>
+                            <button class="btn btn-sm btn-outline-danger view-story" data-id="1">Experience This Story</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-shopping-cart text-primary me-2"></i>Commerce & Daily Life</h5>
+                            <p class="graffiti-text fst-italic mb-3">"Profit is joy."</p>
+                            <p class="card-text">Scratched near the Forum, this simple phrase captures the entrepreneurial spirit that fueled Pompeii's bustling economy.</p>
+                            <button class="btn btn-sm btn-outline-primary view-story" data-id="2">Experience This Story</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feedback & Contact -->
+    <section id="contact" class="py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="professional-form">
+                        <h2 class="section-title text-center mb-4">Discuss This Concept</h2>
+                        <p class="text-center mb-4">This is a vision prototype, shared to start a conversation. I am seeking insights from archaeologists, cultural heritage managers, and educators to explore whether this concept could meaningfully serve Pompeii's public mission.</p>
+                        
+                        <form id="collaboration-form" action="#" method="POST">
+                            <!-- Replace the action="#" with your Formspree endpoint -->
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="name" class="form-label">Full Name *</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="organization" class="form-label">Organization</label>
+                                    <input type="text" class="form-control" id="organization" name="organization">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="role" class="form-label">Role / Title</label>
+                                    <input type="text" class="form-control" id="role" name="role">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="inquiry-type" class="form-label">Type of Inquiry *</label>
+                                    <select class="form-select" id="inquiry-type" name="inquiry-type" required>
+                                        <option value="" selected disabled>Please select...</option>
+                                        <option value="feedback">Share Feedback on Concept</option>
+                                        <option value="potential-collab">Potential Collaboration Interest</option>
+                                        <option value="research-partnership">Academic/Research Perspective</option>
+                                        <option value="press-media">Press & Media Inquiry</option>
+                                        <option value="general-info">General Information</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label for="email" class="form-label">Email Address *</label>
+                                    <input type="email" class="form-control" id="email" name="email" required>
+                                </div>
+                                <div class="col-12">
+                                    <label for="message" class="form-label">Your perspective, feedback, or suggested next steps</label>
+                                    <textarea class="form-control" id="message" name="message" rows="4" placeholder="e.g., 'This aligns with our work on...', 'Have you considered the challenge of...', 'I'd be open to a brief virtual discussion...'"></textarea>
+                                </div>
+                                <div class="col-12 mt-4">
+                                    <button type="submit" class="btn btn-pompeii w-100 py-3">
+                                        <i class="fas fa-comments me-2"></i>Share Feedback or Interest
+                                    </button>
+                                </div>
+                                <p class="text-muted text-center mt-3 small">Your insights will help shape whether and how this concept develops further. All communication is confidential.</p>
+                            </div>
+                        </form>
+                        
+                        <div id="form-success" class="alert alert-success mt-4 text-center" style="display: none;">
+                            <i class="fas fa-check-circle me-2"></i><strong>Thank you for your feedback.</strong> Your perspective is valuable and I'll respond to substantive inquiries promptly.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container text-center">
+            <p class="mb-2"><i class="fas fa-info-circle me-2"></i>This is a non-commercial concept prototype presented for discussion purposes. All historical content is based on published research from Pompeii.</p>
+            <p class="mb-0">© 2023 Voices of Pompeii Concept. This interactive demo visualizes a potential user experience for educational engagement with cultural heritage.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Main JavaScript -->
+    <script>
+        // Sample graffiti stories data - Replace audio URLs with your GitHub hosted files
+        const graffitiStories = {
+            1: {
+                title: "A Lover's Declaration at the Inn",
+                latin: "Victoria, bene quiescas et me desideres.",
+                translation: "Victoria, may you sleep well and may you desire me.",
+                content: "This intimate message was found scratched into the wall of a tavern near the Forum. Unlike formal declarations of love in Roman poetry, this graffiti represents a raw, personal emotion. Archaeologists believe it was written by a common citizen, possibly a soldier or merchant, for a woman named Victoria who may have worked at or frequented the tavern.",
+                location: [40.7510, 14.4874],
+                audioUrl: "LAT_AUDIO2.mp3" // Replace with your actual GitHub audio URL
+            },
+            2: {
+                title: "The Merchant's Motto",
+                latin: "Lucrum gaudium.",
+                translation: "Profit is joy.",
+                content: "Discovered near the entrance to a shop in Pompeii's commercial district, this succinct phrase captures the entrepreneurial spirit of the ancient city. Pompeii was a bustling trade center, and this graffiti likely expressed a shop owner's satisfaction with a good day of business.",
+                location: [40.7498, 14.4843],
+                audioUrl: "LAT_AUDIO1.mp3" // Replace with your actual GitHub audio URL
+            }
+        };
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the map
+            const map = L.map('pompeii-map').setView([40.7500, 14.4875], 16);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Add markers for each story
+            Object.keys(graffitiStories).forEach(storyId => {
+                const story = graffitiStories[storyId];
+                
+                // Create custom marker icon
+                const markerIcon = L.divIcon({
+                    className: 'location-marker pulse',
+                    html: `<i class="fas fa-volume-up"></i>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                const marker = L.marker(story.location, { icon: markerIcon }).addTo(map);
+                
+                // Add click event to marker
+                marker.on('click', function() {
+                    showStoryDetails(storyId);
+                });
+            });
+            
+            // Add Pompeii boundary for context
+            const pompeiiBounds = [
+                [40.746, 14.478],
+                [40.746, 14.498],
+                [40.754, 14.498],
+                [40.754, 14.478]
+            ];
+            
+            L.rectangle(pompeiiBounds, {
+                color: 'var(--pompeii-red)',
+                fillColor: 'transparent',
+                weight: 2,
+                opacity: 0.7,
+                fillOpacity: 0.05
+            }).addTo(map);
+            
+            // Setup story buttons
+            document.querySelectorAll('.view-story').forEach(button => {
+                button.addEventListener('click', function() {
+                    const storyId = this.getAttribute('data-id');
+                    showStoryDetails(storyId);
+                    
+                    // Pan map to the story location
+                    const story = graffitiStories[storyId];
+                    map.setView(story.location, 17);
+                    
+                    // Smooth scroll to story details
+                    document.getElementById('story-details').scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                });
+            });
+            
+            // Close story button
+            document.getElementById('close-story').addEventListener('click', function() {
+                document.getElementById('story-details').style.display = 'none';
+                const audioPlayer = document.getElementById('story-audio');
+                audioPlayer.pause();
+            });
+            
+            // Form submission
+            document.getElementById('collaboration-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // In a real implementation, this would submit to Formspree
+                // For demo purposes, we simulate success
+                
+                // Get form values
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const inquiryType = document.getElementById('inquiry-type').value;
+                
+                // Show success message
+                document.getElementById('form-success').style.display = 'block';
+                
+                // Reset form
+                document.getElementById('collaboration-form').reset();
+                
+                // Scroll to success message
+                document.getElementById('form-success').scrollIntoView({
+                    behavior: 'smooth'
+                });
+                
+                // Log the submission (in a real app, this would be sent to Formspree)
+                console.log(`Feedback received - Name: ${name}, Email: ${email}, Inquiry: ${inquiryType}`);
+                
+                // For Formspree implementation:
+                // fetch('https://formspree.io/f/your-form-id', {
+                //   method: 'POST',
+                //   headers: {'Content-Type': 'application/json'},
+                //   body: JSON.stringify({
+                //     name: name,
+                //     organization: document.getElementById('organization').value,
+                //     role: document.getElementById('role').value,
+                //     inquiryType: inquiryType,
+                //     email: email,
+                //     message: document.getElementById('message').value
+                //   })
+                // })
+                // .then(response => response.json())
+                // .then(data => {
+                //   document.getElementById('form-success').style.display = 'block';
+                //   document.getElementById('collaboration-form').reset();
+                // })
+                // .catch(error => console.error('Error:', error));
+            });
+            
+            // Smooth scrolling for navigation links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const targetId = this.getAttribute('href');
+                    if(targetId === '#') return;
+                    
+                    const targetElement = document.querySelector(targetId);
+                    if(targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+            
+            // Auto-open first story after a short delay
+            setTimeout(() => {
+                showStoryDetails(1);
+            }, 1500);
+        });
+        
+        // Function to show story details
+        function showStoryDetails(storyId) {
+            const story = graffitiStories[storyId];
+            const storyDetails = document.getElementById('story-details');
+            
+            // Update story details
+            document.getElementById('story-title').textContent = story.title;
+            document.getElementById('story-latin').textContent = story.latin;
+            document.getElementById('story-translation').textContent = story.translation;
+            document.getElementById('story-content').textContent = story.content;
+            
+            // Update audio player
+            const audioPlayer = document.getElementById('story-audio');
+            
+            // IMPORTANT: Replace 'your-username' and 'your-repo-name' with your GitHub details
+            const repoName = 'voice-of-pompeii-concept'; // Change this to your actual GitHub repo name
+            const username = 'tbacher85'; // Change this to your GitHub username
+            
+            // Construct the GitHub Pages URL for the audio file
+            const audioFullUrl = `https://${username}.github.io/${repoName}/${story.audioUrl}`;
+            audioPlayer.src = audioFullUrl;
+            
+            // Load the new audio source
+            audioPlayer.load();
+            
+            // Show the story details section
+            storyDetails.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
